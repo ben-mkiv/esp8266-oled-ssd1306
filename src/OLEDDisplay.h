@@ -32,6 +32,9 @@
 #ifndef OLEDDISPLAY_h
 #define OLEDDISPLAY_h
 
+#include <stdint.h>
+#define ARDUINO
+
 #ifdef ARDUINO
 #include <Arduino.h>
 #elif __MBED__
@@ -134,12 +137,25 @@ enum OLEDDISPLAY_TEXT_ALIGNMENT {
   TEXT_ALIGN_CENTER_BOTH = 3
 };
 
-
 enum OLEDDISPLAY_GEOMETRY {
   GEOMETRY_128_64   = 0,
   GEOMETRY_128_32,
   GEOMETRY_RAWMODE,
 };
+
+enum OLEDDISPLAY_EASING_METHOD {
+    LINEAR,
+    SINE,
+    BOUNCE
+};
+
+struct OLEDDISPLAY_ANIMATION_PROPERTIES {
+    int margin = 0;
+    double speed = 1;
+    OLEDDISPLAY_EASING_METHOD easing = LINEAR;
+};
+
+
 
 typedef char (*FontTableLookupFunction)(const uint8_t ch);
 char DefaultFontTableLookup(const uint8_t ch);
@@ -159,6 +175,35 @@ class OLEDDisplay : public Stream {
 
 	uint16_t width(void) const { return displayWidth; };
 	uint16_t height(void) const { return displayHeight; };
+
+
+    static float easeInOutSine(float t, float b, float c, float d) {
+        return -c/2 * (cos(PI*t/d) - 1) + b;
+    }
+
+    static float easeOutBounce(float t,float b , float c, float d) {
+        if ((t/=d) < (1/2.75f)) {
+            return c*(7.5625f*t*t) + b;
+        } else if (t < (2/2.75f)) {
+            float postFix = t-=(1.5f/2.75f);
+            return c*(7.5625f*(postFix)*t + .75f) + b;
+        } else if (t < (2.5/2.75)) {
+            float postFix = t-=(2.25f/2.75f);
+            return c*(7.5625f*(postFix)*t + .9375f) + b;
+        } else {
+            float postFix = t-=(2.625f/2.75f);
+            return c*(7.5625f*(postFix)*t + .984375f) + b;
+        }
+    }
+
+    static float getEasingProgress(OLEDDISPLAY_EASING_METHOD easing, float val, float maxVal){
+        switch(easing){
+            case SINE: return easeInOutSine(val, 0, 1, maxVal);
+            case BOUNCE: return easeOutBounce(val, 0, 1, maxVal);
+            default: case LINEAR: return val/maxVal;
+        }
+    }
+
 
     // Use this to resume after a deep sleep without resetting the display (what init() would do).
     // Returns true if connection to the display was established and the buffer allocated, false otherwise.
@@ -229,8 +274,12 @@ class OLEDDisplay : public Stream {
 
     /* Text functions */
 
-    // Draws a string at the given location
-    void drawString(int16_t x, int16_t y, String text);
+    // Draws a string at the given location, cropped to the given width/height parameters
+    void drawString(int16_t xMove, int16_t yMove, String strUser, short width = 0, short height = 0, short offsetX = 0, short offsetY = 0);
+
+    //
+    void drawStringHorizontalScrolling(int16_t xMove, int16_t yMove, String strUser, short width = 0, short height = 0, OLEDDISPLAY_ANIMATION_PROPERTIES properties = {});
+    void drawStringVerticalScrolling(int16_t xMove, int16_t yMove, String strUser, short width = 0, short height = 0, OLEDDISPLAY_ANIMATION_PROPERTIES properties = {});
 
     // Draws a String with a maximum width at the given location.
     // If the given String is wider than the specified width
@@ -243,6 +292,8 @@ class OLEDDisplay : public Stream {
 
     // Convencience method for the const char version
     uint16_t getStringWidth(String text);
+
+    uint16_t getStringHeight(String text);
 
     // Specifies relative to which anchor point
     // the text is rendered. Available constants:
@@ -363,9 +414,12 @@ class OLEDDisplay : public Stream {
     // converts utf8 characters to extended ascii
     char* utf8ascii(String s);
 
-    void inline drawInternal(int16_t xMove, int16_t yMove, int16_t width, int16_t height, const uint8_t *data, uint16_t offset, uint16_t bytesInData) __attribute__((always_inline));
+    void inline drawInternal(int16_t xMove, int16_t yMove, int16_t width, int16_t height, const uint8_t *data, uint16_t offset, uint16_t bytesInData, uint16_t xMin = 0, uint16_t yMin = 0, uint16_t xMax = 0, uint16_t yMax = 0) __attribute__((always_inline));
 
-    void drawStringInternal(int16_t xMove, int16_t yMove, char* text, uint16_t textLength, uint16_t textWidth);
+    void drawStringInternal(int16_t xMove, int16_t yMove, char* text, uint16_t textLength, uint16_t textWidth, short width = 0, short height = 0, short offsetX = 0, short offsetY = 0);
+
+    int calculateScrollPositionHorizontal(int renderWidth, String string, OLEDDISPLAY_ANIMATION_PROPERTIES properties = {});
+    int calculateScrollPositionVertical(int renderHeight, String string, OLEDDISPLAY_ANIMATION_PROPERTIES properties = {});
 	
 	FontTableLookupFunction fontTableLookupFunction;
 };
