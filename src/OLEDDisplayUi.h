@@ -32,6 +32,8 @@
 #ifndef OLEDDISPLAYUI_h
 #define OLEDDISPLAYUI_h
 
+#define ARDUINO
+
 #ifdef ARDUINO
 #include <Arduino.h>
 #elif __MBED__
@@ -126,6 +128,8 @@ class OLEDDisplayUi {
     // Values for the Frames
     AnimationDirection  frameAnimationDirection;
 
+    OLEDDISPLAY_EASING_METHOD easing = LINEAR;
+
     int8_t              lastTransitionDirection;
 
     uint16_t            ticksPerFrame; 		// ~ 5000ms at 30 FPS
@@ -206,6 +210,11 @@ class OLEDDisplayUi {
      * Set the approx. time a transition will take
      */
     void setTimePerTransition(uint16_t time);
+
+    /**
+     * sets the easing method which is used for transitions
+     */
+    void setTransitionMethod(OLEDDISPLAY_EASING_METHOD method);
 
     // Customize indicator position and style
 

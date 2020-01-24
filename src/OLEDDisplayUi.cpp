@@ -98,11 +98,17 @@ void OLEDDisplayUi::setAutoTransitionBackwards(){
   this->state.frameTransitionDirection = -1;
   this->lastTransitionDirection = -1;
 }
+
+// -/------ Transition property setters -------\-
+
 void OLEDDisplayUi::setTimePerFrame(uint16_t time){
   this->ticksPerFrame = (uint16_t) ( (float) time / (float) updateInterval);
 }
 void OLEDDisplayUi::setTimePerTransition(uint16_t time){
   this->ticksPerTransition = (uint16_t) ( (float) time / (float) updateInterval);
+}
+void OLEDDisplayUi::setTransitionMethod(OLEDDISPLAY_EASING_METHOD method){
+    easing = method;
 }
 
 // -/------ Customize indicator position and style -------\-
@@ -301,7 +307,8 @@ void OLEDDisplayUi::resetState() {
 void OLEDDisplayUi::drawFrame(){
   switch (this->state.frameState){
      case IN_TRANSITION: {
-       float progress = (float) this->state.ticksSinceLastStateSwitch / (float) this->ticksPerTransition;
+       float progress = OLEDDisplay::getEasingProgress(easing, this->state.ticksSinceLastStateSwitch, this->ticksPerTransition);
+
        int16_t x = 0, y = 0, x1 = 0, y1 = 0;
        switch(this->frameAnimationDirection){
         case SLIDE_LEFT:
